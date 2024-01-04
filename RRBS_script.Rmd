@@ -1,0 +1,528 @@
+---
+title: "RRBS analysis master's thesis_R2"
+author: "Gauthier Alexandrescu"
+date: "31/12/2023"
+output: html_document
+---
+
+
+# 0° Preparation of the working environment
+
+
+## General setup of RMarkdown chunks and common shortcuts (for MacOS)
+```{r setup}
+if(!requireNamespace("knitr", quietly=TRUE))
+        install.packages("knitr")
+library(knitr)
+if(!requireNamespace("rmarkdown", quietly=TRUE))
+        install.packages("rmarkdown")
+library(rmarkdown)
+knitr::opts_chunk$set(eval=F, results="hide", echo = TRUE, include=TRUE, warning=TRUE, error=TRUE)
+```
+
+## Set working directory 
+```{r wd}
+setwd("/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam")
+```
+
+## Install Bioconductor 3.16 and requested packages
+Bioconductor: https://www.bioconductor.org/
+search for available packages: https://www.bioconductor.org/packages/release/BiocViews.html#___Software
+```{r packages}
+# Check the version of BiocManager on your computer
+BiocManager::version()
+#if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+#BiocManager::install(version = "3.18")
+library(BiocManager)
+#update your packages
+#BiocManager::install()
+#install.packages("stringi",type="mac.binary") #if an error message appears (aucun package nommé ‘stringi’ n'est trouvé)
+library(stringi)
+#if(!requireNamespace("pacman", quietly=TRUE)) #the package pacman allows to install and load several packages from Cran at once if they're not installed.
+        #install.packages("pacman")
+library(pacman)
+#BiocManager::install(c("Rqc", "methylKit", "ShortRead", "QuasR"))
+pacman::p_load(Rqc, methylKit, ShortRead, QuasR, remotes, factoextra)
+#BiocManager::install("methylKit", force=T) # if it does not work
+#install.packages("ggplot2")
+#install.packages("scales")
+
+library(ggplot2)
+library(scales)
+```
+
+
+# 1° Working in methylKit
+## Importing the data in methylKit
+Once the files are in .BAM format after Samtools, we can import them in methylKit package in R using processBismarkAln function.
+We can now do it at once for several files (it takes 6-7min per file)
+```{r importing files}
+file.list <- list("/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/trimmed-2TC35.1_val_1_bismark_bt2_pe.sorted.bam")
+
+myobj <- processBismarkAln(file.list,
+           sample.id=list("TC35"),
+           assembly="ASM164957v2",
+           treatment=c(1),
+           read.context="CpG",
+           save.folder = getwd(),
+           mincov = 10)
+
+file.list <- list("/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP1_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP12_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP13_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP14_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP15_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP16_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP19_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP29_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP32_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP70_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP83_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP90_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP97_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP104_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP105_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/EPP106_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC2_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC5_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC10_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC18_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC26_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC33_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC35_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC39_CpG.txt",
+                  "/Users/gauthieralexandrescu/Documents/2023-2024/Mémoire/Data analysis/RRBS/Sorted.bam/TC82_CpG.txt")
+                
+myobj <- methRead(file.list,
+           sample.id=list("EPP1","EPP12", "EPP13", "EPP14", "EPP15", "EPP16", "EPP19", "EPP29", "EPP32", "EPP70", "EPP83", "EPP90", "EPP97", "EPP104", "EPP105", "EPP106", "TC2", "TC5", "TC10", "TC18", "TC26", "TC33", "TC35", "TC39", "TC82"),
+           assembly="ASM164957v2",
+           treatment=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0),
+           context="CpG",
+           mincov = 10)
+```
+
+## Analyse the CpG on each file and filter to get rid of the low quality
+```{r methylation stats}
+par(mfrow = c(2,3))
+for(a in 1:25) {getMethylationStats(myobj[[a]], plot=T, strands = T)} #all samples follow the typical bimodal methylation pattern
+par(mfrow=c(1,1))
+getMethylationStats(myobj[[1]],plot=TRUE,both.strands=F)
+```
+
+```{r coverage stats}
+par(mfrow = c(2,3))
+for(a in 1:25) {getCoverageStats(myobj[[a]], plot=T, strands = T)}
+par(mfrow=c(1,1))
+getCoverageStats(myobj[[1]],plot=T,both.strands=FALSE)
+getCoverageStats(myobj[[6]],plot=F,both.strands=FALSE)
+```
+As applied, the minimum coverage is 10. The 99.9 percentile is preferentially chosen in order to get rid of the 0.1% of the highest coverage to be sure not to have bias with false positives in the analysis.
+
+```{r filtering}
+?filterByCoverage
+filtered.myobj <- filterByCoverage(myobj, lo.count=30, lo.perc=NULL,
+                                      hi.count=NULL, hi.perc=99.9)
+#With this filtering, the histograms of CpG coverage are much more stringent (lo.count=30). The lowest count of 30 is quite stringent compared to 10, it is more reliable but false negatives can be missed.
+
+par(mfrow = c(2,3))
+for(a in 1:25) {getCoverageStats(filtered.myobj[[a]], plot=T, strands = T)}
+par(mfrow=c(1,1))
+getCoverageStats(filtered.myobj[[2]],plot=T,both.strands=FALSE)
+getCoverageStats(filtered.myobj[[4]],plot=F,both.strands=FALSE)
+filtered.myobj
+```
+
+## Unite the different files in the same object
+Minimum number of samples covered (min.per.group)
+```{r unit meth}
+meth1L <- methylKit::unite(filtered.myobj, destrand=T, min.per.group = 1L)
+meth1L #71540 rows
+meth2L <- methylKit::unite(filtered.myobj, destrand=F, min.per.group = 2L)
+meth2L #2018 rows
+meth3L <- methylKit::unite(filtered.myobj, destrand=F, min.per.group = 3L)
+meth3L #896 rows
+```
+This is an union of all the samples in the same table. There are 71540 CpGs (number of rows) analyzed in the unite object (meth1L). Minimum one sample per condition (min.per.group = 1L) is less stringent. If there are few replicates, it is more interesting to use min.per.group = NULL, so all the samples are covered here. In other words, all the CpGs are taken in all the samples. min.per.group = 2L would be preferred in the situation where there are way more replicates (for example a few decades) because it is less stringent for a lot of scientific information (and thus a lot of CpGs) that shouldn't be missed. Therefore, 1L is a great balance.
+
+
+## See the variability of each CpG and get the percentage methylation Matrix
+```{r CV CpG}
+pm=percMethylation(meth1L) # get percent methylation matrix
+head(pm)
+summary(pm)
+
+#calculate the coefficient of variation for each CpG in EPP and in TC
+CV <- function(x){sd(x)/mean(x)*100}
+EPP <- apply(pm[,1:16], MARGIN=1,FUN = CV)
+summary(EPP) #mean= 32.13
+hist(EPP)
+
+TC <- apply(pm[,17:25], MARGIN=1,FUN = CV)
+summary(TC) #mean= 5.62
+hist(TC)
+
+CVall <- apply(pm[,1:25], MARGIN=1,FUN = CV)
+summary(CVall)
+hist(CVall)
+```
+mean CV EPP: 32.13
+mean CV TC: 5.62
+mean CV all: NA
+The mean coefficient of variation (CV) in EPP is 32.13, and the mean of CV in TC is 5.62. CV is an indicator of the total variability of methylation between the samples. There is apparently a much higher mean in EPP than in TC, so EPP has more total variability of methylation.
+
+## PCA and clustering 
+Only on a matrix with no NA (CpG in all samples)
+```{r correlation}
+getCorrelation(meth1L,plot=T)
+```
+
+```{r cluster}
+?clusterSamples
+clusterSamples(meth1L, dist="correlation", method="ward", plot=TRUE)
+```
+
+```{r PCA}
+pc <- PCASamples(meth1L,obj.return = T, adj.lim=c(1,1), comp = c(1,2))
+# Eigenvalues
+eig.val <- get_eigenvalue(pc)
+eig.val
+fviz_eig(pc)
+```
+
+## Extracting regions of interest
+Calculate the different methylation (it can take few minutes)
+The most efficient is to use logistic regression with correction for overdispersion
+```{r diff.meth}
+dm.lr <- calculateDiffMeth(meth1L, overdispersion = "MN",test ="Chisq", adjust = "SLIM", covariate = NULL)
+dm.lr
+summary(dm.lr)
+```
+71540 rows= CpGs
+Meth.diff is the variation of methylation level for each line (each CpG). Here, mean meth.diff= -3.479 with a qvalue of 0.1777, therefore not significant.
+
+
+Determine the cutoffs
+```{r all.diff}
+# get differentially methylated bases/regions with specific cutoffs
+all.diff=getMethylDiff(dm.lr,difference=10,qvalue=0.01,type="all") #we keep when there's only 10% difference of methylation between the samples; type="all" to keep all data over- and under-methylated
+all.diff
+summary(all.diff)
+```
+Firstly, the differentially methylated bases are analyzed with specific cutoffs, where only 10% of difference of methylation between the samples is allowed (there is also a statistical threshold of 0.01 for the qvalue). With the all.diff object, 879 rows are obtained. So, 879 CpGs are significantly differentially methylated between EPP and TC populations.
+
+With the summary of the object all.diff, the mean is equal to -16.34% differential methylation in EPP compared to TC, with a maximum of 100.00% (hypermethylated) and a minimum of -100.00% (hypomethylated).
+Knowing that there are 71540 total CpGs in the meth1L object, and that there are 879 CpGs differentially methylated (DMC) with this threshold between the populations, the following calculation can be done:
+879/71540*100= 1.230% of the CpGs are significantly differentially methylated between EPP and TC populations in the reverse strand of DNA, which is very low. Mean qvalue= 1.127e-03
+
+```{r hypo & hyper methylation}
+# get hyper-methylated
+hyper=getMethylDiff(dm.lr,difference=10,qvalue=0.01,type="hyper")
+hyper
+summary(hyper)
+#mean= 26.99, min= 10.07, max= 100.00% meth.diff
+
+# get hypo-methylated
+hypo=getMethylDiff(dm.lr,difference=10,qvalue=0.01,type="hypo")
+hypo
+summary(hypo)
+#mean= -35.34, min= -100.00, max= -10.01%
+```
+
+
+## We can do the analysis on regions and not CpGs
+!!! long processing time
+```{r tiles}
+myobj_lowCov <- methRead(file.list,
+           sample.id=list("EPP1","EPP12", "EPP13", "EPP14", "EPP15", "EPP16", "EPP19", "EPP29", "EPP32", "EPP70", "EPP83", "EPP90", "EPP97", "EPP104", "EPP105", "EPP106", "TC2", "TC5", "TC10", "TC18", "TC26", "TC33", "TC35", "TC39", "TC82"),
+           assembly="ASM164957v2",
+           treatment=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0),
+           context="CpG",
+           mincov = 3)
+
+tiles <-  tileMethylCounts(myobj_lowCov,win.size=300,step.size=300,cov.bases = 3)
+head(tiles[[1]])
+tiles[[1]]
+
+#unite
+alltiles1L <- methylKit::unite(tiles, destrand=FALSE, min.per.group = 1L)
+alltiles1L
+```
+There are 42024 tiles (number of rows) analyzed in the unite object (alltiles1L).
+
+```{r CV tiles}
+pmat=percMethylation(alltiles1L) 
+head(pmat)
+summary(pmat)
+
+#calculate coefficient of variation for each tile in EPP and in TC
+CV <- function(x){sd(x)/mean(x)*100}
+
+tilesEPP <- apply(pmat[,1:16], MARGIN=1,FUN = CV)
+summary(tilesEPP) #mean= 9.15
+hist(tilesEPP)
+
+tilesTC <- apply(pmat[,17:25], MARGIN=1,FUN = CV)
+summary(tilesTC) #mean= 4.38
+hist(tilesTC)
+
+CValltiles <- apply(pmat[,1:25], MARGIN=1,FUN = CV)
+summary(CValltiles)
+hist(CValltiles)
+```
+
+```{r tiles.diff}
+dm.lrtiles=calculateDiffMeth(alltiles1L,overdispersion = "MN",test ="Chisq", covariate=NULL, adjust = "SLIM")
+dm.lrtiles # 42024 rows (normal because using alltiles1L)
+tiles.diff=getMethylDiff(dm.lrtiles,difference=10,qvalue=0.01,type="all")
+tiles.diff
+summary(tiles.diff)
+```
+With the tiles.diff object, 1780 rows are obtained. So, 1780 tiles are significantly differentially methylated between EPP and TC populations.
+
+With the summary of the object tiles.diff, the mean is equal to -14.35%  differential methylation in EPP compared to TC, with a maximum of 91.95% (hypermethylated) and a minimum of -100.00% (hypomethylated).
+Knowing that there are 42024 total tiles in the alltiles1L object, and that there are 1780 tiles differentially methylated (DMR) with this threshold between the populations, the following calculation can be done:
+1780/42024*100= 4.236% of the tiles are significantly differentially methylated between EPP and TC populations, which is quite low as well. Mean qvalue= 9.975e-04
+
+```{r hypo & hyper methylation}
+# get hyper-methylated
+hyper=getMethylDiff(dm.lrtiles,difference=10,qvalue=0.01,type="hyper")
+hyper
+summary(hyper)
+#mean= 27.46, min= 10.08, max= 91.95% meth.diff
+
+# get hypo-methylated
+hypo=getMethylDiff(dm.lrtiles,difference=10,qvalue=0.01,type="hypo")
+hypo
+summary(hypo)
+#mean= -21.60, min= -100.00, max= -10.00%
+```
+
+## Cytosine methylation report
+```{r pie chart all}
+data <- c(21, 26, 52, 1)
+Context <- c("CpG", "CHG", "CHH", "Unkown (CN or CHN)")
+df <- data.frame(Context, data)
+
+ggplot(df, aes(x="", y=data, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("orange", "#66BB6A", "#EEEEEE", "#6BAFE9")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+geom_text(aes(label = paste0(data,"%")), position = position_stack(vjust = 0.5))
+```
+
+
+```{r pie chart EPP}
+#% meth in every distribution
+dataEPP <- c(82, 7, 10, 1)
+Context <- c("CpG", "CHG", "CHH", "Unkown (CN or CHN)")
+dfEPP <- data.frame(Context, dataEPP)
+
+ggplot(dfEPP, aes(x="", y=dataEPP, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#D9F2FA", "#B6DCF9", "#87C8F7", "#6BAFE9")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "EPP") +
+geom_text(aes(label = paste0(dataEPP,"%")), position = position_stack(vjust = 0.5))
+
+#CpG
+dataECpG <- c(74, 26)
+Context <- c("Methylated", "Unmethylated")
+dfECpG <- data.frame(Context, dataECpG)
+
+ggplot(dfECpG, aes(x="", y=dataECpG, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#BDBDBD", "#EEEEEE")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CpG") +
+geom_text(aes(label = paste0(dataECpG,"%")), position = position_stack(vjust = 0.5))
+
+#CHG
+dataECHG <- c(5, 95)
+Context <- c("Methylated", "Unmethylated")
+dfECHG <- data.frame(Context, dataECHG)
+
+ggplot(dfECHG, aes(x="", y=dataECHG, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#FFA726", "#FFCC80")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CHG") +
+geom_text(aes(label = paste0(dataECHG,"%")), position = position_stack(vjust = 0.5))
+
+#CHH
+dataECHH <- c(4, 96)
+Context <- c("Methylated", "Unmethylated")
+dfECHH <- data.frame(Context, dataECHH)
+
+ggplot(dfECHH, aes(x="", y=dataECHH, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#9CCC65", "#C5E1A5")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CHH") +
+geom_text(aes(label = paste0(dataECHH,"%")), position = position_stack(vjust = 0.5))
+
+#Unknown
+dataUKN <- c(10, 90)
+Context <- c("Methylated", "Unmethylated")
+dfEUKN <- data.frame(Context, dataUKN)
+
+ggplot(dfEUKN, aes(x="", y=dataUKN, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#4FC3F7", "#B3E5FC")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "Unknown") +
+geom_text(aes(label = paste0(dataUKN,"%")), position = position_stack(vjust = 0.5))
+```
+
+
+```{r pie chart TC}
+#% meth in every distribution
+dataTC <- c(86, 5, 8, 1)
+Context <- c("CpG", "CHG", "CHH", "Unkown (CN or CHN)")
+dfTC <- data.frame(Context, dataTC)
+
+ggplot(dfTC, aes(x="", y=dataTC, fill=Context)) + 
+geom_bar(width = 1, stat = "identity") + 
+coord_polar(theta = "y") + 
+scale_fill_brewer(palette = "Set4") + 
+theme_minimal() + 
+theme(    
+panel.grid = element_blank(),  
+panel.border = element_blank(),
+axis.line = element_blank(),    
+axis.text = element_blank(),    
+axis.ticks = element_blank(),    
+plot.title = element_text(size = 16, face = "bold")) +    
+labs(title= "TC") + 
+geom_text(aes(label = paste0(dataTC,"%")), position = position_stack(vjust = 0.5))
+
+
+#CpG
+dataTCpG <- c(74, 26)
+Context <- c("Methylated", "Unmethylated")
+dfTCpG <- data.frame(Context, dataTCpG)
+
+ggplot(dfTCpG, aes(x="", y=dataTCpG, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#BDBDBD", "#EEEEEE")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CpG") +
+geom_text(aes(label = paste0(dataTCpG,"%")), position = position_stack(vjust = 0.5))
+
+#CHG
+dataTCHG <- c(3, 97)
+Context <- c("Methylated", "Unmethylated")
+dfTCHG <- data.frame(Context, dataTCHG)
+
+ggplot(dfTCHG, aes(x="", y=dataTCHG, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#FFA726", "#FFCC80")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CHG") +
+geom_text(aes(label = paste0(dataTCHG,"%")), position = position_stack(vjust = 0.5))
+
+#CHH
+dataTCHH <- c(3, 97)
+Context <- c("Methylated", "Unmethylated")
+dfTCHH <- data.frame(Context, dataTCHH)
+
+ggplot(dfTCHH, aes(x="", y=dataTCHH, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#9CCC65", "#C5E1A5")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "CHH") +
+geom_text(aes(label = paste0(dataTCHH,"%")), position = position_stack(vjust = 0.5))
+
+#Unknown
+dataUKN <- c(8, 92)
+Context <- c("Methylated", "Unmethylated")
+dfEUKN <- data.frame(Context, dataUKN)
+
+ggplot(dfEUKN, aes(x="", y=dataUKN, fill=Context)) +
+geom_bar(width = 1, stat = "identity") +
+coord_polar(theta = "y") +
+scale_fill_manual(values = c("#4FC3F7", "#B3E5FC")) +
+theme_minimal() +
+theme(
+panel.grid = element_blank(),
+panel.border = element_blank(),
+axis.line = element_blank(),
+axis.text = element_blank(),
+axis.ticks = element_blank(),
+plot.title = element_text(size = 16, face = "bold")) +
+labs(title= "Unknown") +
+geom_text(aes(label = paste0(dataUKN,"%")), position = position_stack(vjust = 0.5))
+
+```
